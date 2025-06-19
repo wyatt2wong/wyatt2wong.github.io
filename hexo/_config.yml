@@ -67,6 +67,8 @@ index_generator:
 # Category & Tag
 default_category: uncategorized
 category_map:
+  "java": java
+  "算法&数据结构": alg-ds
 tag_map:
 
 # Metadata elements
