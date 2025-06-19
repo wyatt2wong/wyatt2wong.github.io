@@ -4,3 +4,4 @@ https://wyatt2wong.github.io/archives/index.html
 https://wyatt2wong.github.io/tags/index.html
 https://wyatt2wong.github.io/categories/index.html
 https://wyatt2wong.github.io/
+https://wyatt2wong.github.io/categories/alg-ds/
