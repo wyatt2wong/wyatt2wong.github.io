@@ -3,9 +3,9 @@
 ## Source: https://github.com/hexojs/hexo/
 
 # Site
-title: Wyatt's Blog
+title: Wyatt Wong's Blog
 subtitle: '宁静致远'
-description: ''
+description: '淡泊以明志，宁静以致远'
 keywords:
 author: Wyatt Wong
 language: zh-CN
@@ -13,7 +13,7 @@ timezone: 'Asia/Shanghai'
 
 # URL
 ## Set your site url here. For example, if you use GitHub Page, set url as 'https://username.github.io/project'
-url: https://kilobug.github.io
+url: https://wyatt2wong.github.io
 permalink: :year/:month/:day/:title/
 permalink_defaults:
 pretty_urls:
@@ -68,8 +68,12 @@ index_generator:
 default_category: uncategorized
 category_map:
   "java": java
+  "前端": fe
+  "Vue": vue
+  "Web3": web3
   "算法&数据结构": alg-ds
 tag_map:
+
 
 # Metadata elements
 ## https://developer.mozilla.org/en-US/docs/Web/HTML/Element/meta
@@ -98,7 +102,8 @@ ignore:
 # Extensions
 ## Plugins: https://hexo.io/plugins/
 ## Themes: https://hexo.io/themes/
-theme: landscape
+#theme: landscape
+theme: snark
 
 # Deployment
 ## Docs: https://hexo.io/docs/one-command-deployment
