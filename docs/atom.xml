@@ -1,13 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <feed xmlns="http://www.w3.org/2005/Atom">
-  <title>Wyatt&#39;s Blog</title>
+  <title>Wyatt Wong&#39;s Blog</title>
   
   <subtitle>宁静致远</subtitle>
-  <link href="https://kilobug.github.io/atom.xml" rel="self"/>
+  <link href="https://wyatt2wong.github.io/atom.xml" rel="self"/>
   
-  <link href="https://kilobug.github.io/"/>
+  <link href="https://wyatt2wong.github.io/"/>
   <updated>2025-06-19T13:18:14.772Z</updated>
-  <id>https://kilobug.github.io/</id>
+  <id>https://wyatt2wong.github.io/</id>
   
   <author>
     <name>Wyatt Wong</name>
@@ -18,8 +18,8 @@
   
   <entry>
     <title>背包算法：01、完全</title>
-    <link href="https://kilobug.github.io/2025/06/19/knapsack/"/>
-    <id>https://kilobug.github.io/2025/06/19/knapsack/</id>
+    <link href="https://wyatt2wong.github.io/2025/06/19/knapsack/"/>
+    <id>https://wyatt2wong.github.io/2025/06/19/knapsack/</id>
     <published>2025-06-19T06:00:30.871Z</published>
     <updated>2025-06-19T13:18:14.772Z</updated>
     
@@ -33,7 +33,7 @@
     
     
     
-    <category term="算法&amp;数据结构" scheme="https://kilobug.github.io/categories/alg-ds/"/>
+    <category term="算法&amp;数据结构" scheme="https://wyatt2wong.github.io/categories/alg-ds/"/>
     
     
   </entry>
