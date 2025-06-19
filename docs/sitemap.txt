@@ -1,0 +1,7 @@
+https://kilobug.github.io/about/index.html
+https://kilobug.github.io/archives/index.html
+https://kilobug.github.io/tags/index.html
+https://kilobug.github.io/2025/06/19/knapsack/
+https://kilobug.github.io/categories/index.html
+https://kilobug.github.io/
+https://kilobug.github.io/categories/alg-ds/
