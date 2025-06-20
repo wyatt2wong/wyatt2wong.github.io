@@ -21,7 +21,6 @@
 **.iws
 **.iml
 **.ipr
-/out/
 **/out/
 ### NetBeans ###
 **/.nb-gradle/
