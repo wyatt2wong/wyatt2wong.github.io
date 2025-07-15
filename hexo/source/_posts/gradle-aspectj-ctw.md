@@ -68,7 +68,7 @@ public class AspectC { ... }
 上述三个切面的执行顺序为：`A > B > C`
 
 2. **切面作用域**
-3. 默认为`切面静态单例`，可选 `perthis` 和 `pertarget`
+默认为`切面静态单例`，可选 `perthis` 和 `pertarget`
 - **singleton**
 > 每个 `切面类` 有一个 `切面实例`
 >>注意！此时在spring中配置@Bean时，不能用`new 切面类()`，而是 `Aspects.aspectOf(切面类.class)`
