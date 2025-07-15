@@ -1,3 +1,4 @@
+https://wyatt2wong.github.io/2025/07/15/gradle-aspectj-ctw/
 https://wyatt2wong.github.io/2025/06/19/knapsack/
 https://wyatt2wong.github.io/about/index.html
 https://wyatt2wong.github.io/archives/index.html
@@ -5,3 +6,4 @@ https://wyatt2wong.github.io/tags/index.html
 https://wyatt2wong.github.io/categories/index.html
 https://wyatt2wong.github.io/
 https://wyatt2wong.github.io/categories/alg-ds/
+https://wyatt2wong.github.io/categories/java/

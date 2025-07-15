@@ -1,3 +1,5 @@
-# wyatt2wong.github.io
-
-记录实验结果的博客
+redis - 512
+mysql - 512
+java - 1G
+python - 512
+nginx - 128
