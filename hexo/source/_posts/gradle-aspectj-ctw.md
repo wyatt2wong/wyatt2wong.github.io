@@ -14,7 +14,7 @@ categories:
 ---
 以下主要记录 `LTW` 方式下的组合：**Gradle+AJC** 
 
-# 1.Gradle配置
+# Gradle配置
 在项目 `settings.gradle` 中配置，统一管理该插件版本
 ```groovy
 plugins {
@@ -36,11 +36,11 @@ plugins {
     id "io.freefair.aspectj.post-compile-weaving"
 }
 ```
-# 2.Idea配置
+# Idea配置
 1. 安装Idea插件 `AspectJ`
-2. 在Idea菜单`Project Structure` (即`项目结构`) >`Facet` 中，添加 `AspectJ` 并选择对应模块
+2. 在Idea菜单`Project Structure` (即`项目结构`) >`Facet` 中，添加 `AspectJ` 并选择对应模块  
 
-# 3.注解式切面
+# 注解式切面
 
 与spring aop的使用方式类似
 > 如 `@Around`、`@Before`、`@After`、`@Pointcut`、`@AfterReturning`、`@AfterThrowing` 等
@@ -68,14 +68,14 @@ public class AspectC { ... }
 上述三个切面的执行顺序为：`A > B > C`
 
 2. **切面作用域**
-> 默认为`切面静态单例`，可选 `perthis` 和 `pertarget`
-> - **singleton**
-> > 每个 `切面类` 有一个 `切面实例`
-> >>注意！此时在spring中配置@Bean时，不能用`new 切面类()`，而是 `Aspects.aspectOf(切面类.class)`
-> - **perthis**
-> > 每个 `目标实例` 有一个 `切面实例`，`切面实例` 随着 `目标实例` 的 创建而创建、GC回收而回收
-> - **pertarget**
-> > 每个 `目标类` 各有一个 `切面实例`，同一 `目标类` 的 `多个实例`共用该类的`切面实例`
+3. 默认为`切面静态单例`，可选 `perthis` 和 `pertarget`
+- **singleton**
+> 每个 `切面类` 有一个 `切面实例`
+>>注意！此时在spring中配置@Bean时，不能用`new 切面类()`，而是 `Aspects.aspectOf(切面类.class)`
+- **perthis**
+> 每个 `目标实例` 有一个 `切面实例`，`切面实例` 随着 `目标实例` 的 创建而创建、GC回收而回收
+- **pertarget**
+> 每个 `目标类` 各有一个 `切面实例`，同一 `目标类` 的 `多个实例`共用该类的`切面实例`
 ---
 
 # 相关链接
