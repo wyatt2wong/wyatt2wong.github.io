@@ -12,7 +12,7 @@ categories:
   > 运行时织入，依托 `JDK代理`、`CGLIB` 等代理机制，在运行时动态修改字节码
 
 ---
-以下主要记录 `LTW` 方式下的组合：**Gradle+AJC** 
+以下主要记录 `CTW` 方式下的组合：**Gradle+AJC** 
 
 # Gradle配置
 在项目 `settings.gradle` 中配置，统一管理该插件版本
@@ -70,8 +70,9 @@ public class AspectC { ... }
 2. **切面作用域**
 默认为`切面静态单例`，可选 `perthis` 和 `pertarget`
 - **singleton**
-> 每个 `切面类` 有一个 `切面实例`
->>注意！此时在spring中配置@Bean时，不能用`new 切面类()`，而是 `Aspects.aspectOf(切面类.class)`
+> 每个 `切面类` 有一个 `切面实例` 
+
+> 注意！此时在spring中配置@Bean时，不能用`new 切面类()`，而是 `Aspects.aspectOf(切面类.class)`
 - **perthis**
 > 每个 `目标实例` 有一个 `切面实例`，`切面实例` 随着 `目标实例` 的 创建而创建、GC回收而回收
 - **pertarget**
