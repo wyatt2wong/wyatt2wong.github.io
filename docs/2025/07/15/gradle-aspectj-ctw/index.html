@@ -16,7 +16,7 @@
 </li>
 </ol>
 <hr>
-<p>以下主要记录 <code>LTW</code> 方式下的组合：<strong>Gradle+AJC</strong> </p>
+<p>以下主要记录 <code>CTW</code> 方式下的组合：<strong>Gradle+AJC</strong> </p>
 <h1 id="Gradle配置"><a href="#Gradle配置" class="headerlink" title="Gradle配置"></a>Gradle配置</h1><p>在项目 <code>settings.gradle</code> 中配置，统一管理该插件版本</p>
 <figure class="highlight groovy"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">plugins &#123;</span><br><span class="line">    id <span class="string">&#x27;io.freefair.settings.plugin-versions&#x27;</span> version <span class="string">&#x27;版本&#x27;</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
 
@@ -48,11 +48,13 @@
 <ul>
 <li><strong>singleton</strong><blockquote>
 <p>每个 <code>切面类</code> 有一个 <code>切面实例</code></p>
+</blockquote>
+</li>
+</ul>
 <blockquote>
 <p>注意！此时在spring中配置@Bean时，不能用<code>new 切面类()</code>，而是 <code>Aspects.aspectOf(切面类.class)</code></p>
 </blockquote>
-</blockquote>
-</li>
+<ul>
 <li><strong>perthis</strong><blockquote>
 <p>每个 <code>目标实例</code> 有一个 <code>切面实例</code>，<code>切面实例</code> 随着 <code>目标实例</code> 的 创建而创建、GC回收而回收</p>
 </blockquote>
