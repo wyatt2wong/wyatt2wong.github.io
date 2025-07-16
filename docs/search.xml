@@ -4,6 +4,25 @@
   
     
     <entry>
+      <title>B+Tree简要理解</title>
+      <link href="/2025/07/16/bplus-tree/"/>
+      <url>/2025/07/16/bplus-tree/</url>
+      
+        <content type="html"><![CDATA[<p><code>B+Tree</code>是一种为磁盘等存取设备设计的平衡查找树，它实现了以<code>O(log n)</code>复杂度执行<code>查找、顺序读、插入和删除</code>操作。</p><p>与B-Tree主要区别：</p><blockquote><ol><li>非叶子节点不存数据，通过更低的树高度减少存取设备的IO次数</li></ol></blockquote><blockquote><ol start="2"><li>叶子节点有前后指针，通过双向链表实现高效的范围查找</li></ol></blockquote><p>实现B+Tree的核心思路：</p><ol><li>根据允许的节点最大空间（如mysql innodb默认16KB），算出每个节点的上下界(Lower&#x2F;Upper Bound)</li></ol><ul><li>根节点：关键字数在1至m-1个之间，子节点数在2-m个之间</li><li>非根非叶节点：关键字数在(m&#x2F;2)-1至m-1个之间，子节点数在ceil(m&#x2F;2)至个之间</li><li>叶节点：关键字数同<code>非根非叶节点</code>，无子节点<blockquote><p>m为非叶子节点的子节点数的最大值<br>如mysql innodb每页默认16KB，假设每行记录关键字4 byte，则一个非页子节点最多容纳 <code>16*1024/4=4096</code> 行记录关键字</p></blockquote></li></ul><ol start="2"><li>插入<blockquote><p>找到位置插入后，若节点关键字数超上界, 则</p><ol><li>取节点中间关键字拆成两个节点，把中间关键字插入父节点，插入位置由原父分割关键字位置决定(如原上级左则插右，反之则右左)</li><li>以父节点为中心检查是否超出上界，超出则递归执行第一、二步。</li></ol></blockquote></li><li>删除<blockquote><p>删除后，若当前节点关键字数低于下界，则</p><ol><li>向<code>大于下界</code>的<code>兄弟节点</code>借关键字(<code>原父分割关键字下沉，左或右兄弟节点关键字上升，直到借出目标节点完成关键字上升</code>)</li><li>无<code>大于下界</code>的<code>兄弟节点</code>，<code>合并一个相邻兄弟节点且原父分割关键字下沉</code>，以父节点为中心递归检查是否低于下界</li><li>节点调整后，要始终保证<code>页子节点的双向链表连续性</code>。</li></ol></blockquote></li></ol>]]></content>
+      
+      
+      <categories>
+          
+          <category> 算法&amp;数据结构 </category>
+          
+      </categories>
+      
+      
+    </entry>
+    
+    
+    
+    <entry>
       <title>AspectJ在Gradle的CTW案例</title>
       <link href="/2025/07/15/gradle-aspectj-ctw/"/>
       <url>/2025/07/15/gradle-aspectj-ctw/</url>
