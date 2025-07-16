@@ -37,9 +37,10 @@ while(true){
     }
     if((idx=queue.offer(请求入参+future)) > 0) { // cas
         break; // 加入队列，跳出循环
-    }else { // 队列满了
-        map.remove(key, queue); // cas，将老队列从请求特征集合中移除，重新初始化
     }
+    // 队列满了
+    map.remove(key, queue); // cas，将老队列从请求特征集合中移除，重新初始化
+    Thread.onSpinWait(); // 自旋等待时，提示处理器优化，但线程状态不切换
 }
 if(afterMargin == 队列容量-1) { // 首个放入队列
     创建延时任务(时间桶刻度) {
