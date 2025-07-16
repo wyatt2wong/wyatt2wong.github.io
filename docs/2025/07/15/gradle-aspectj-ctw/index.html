@@ -24,10 +24,12 @@
 <figure class="highlight groovy"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">buildscript &#123;</span><br><span class="line">    dependencies &#123;</span><br><span class="line">        classpath <span class="string">&quot;org.aspectj:aspectjtools:版本&quot;</span></span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
 <p>接着在 <code>项目/模块</code> 的 <code>build.gradle</code> 中配置</p>
 <figure class="highlight groovy"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">plugins &#123;</span><br><span class="line">    id <span class="string">&quot;io.freefair.aspectj.post-compile-weaving&quot;</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<hr>
 <h1 id="Idea配置"><a href="#Idea配置" class="headerlink" title="Idea配置"></a>Idea配置</h1><ol>
 <li>安装Idea插件 <code>AspectJ</code></li>
 <li>在Idea菜单<code>Project Structure</code> (即<code>项目结构</code>) &gt;<code>Facet</code> 中，添加 <code>AspectJ</code> 并选择对应模块</li>
 </ol>
+<hr>
 <h1 id="注解式切面"><a href="#注解式切面" class="headerlink" title="注解式切面"></a>注解式切面</h1><p>与spring aop的使用方式类似</p>
 <blockquote>
 <p>如 <code>@Around</code>、<code>@Before</code>、<code>@After</code>、<code>@Pointcut</code>、<code>@AfterReturning</code>、<code>@AfterThrowing</code> 等</p>
