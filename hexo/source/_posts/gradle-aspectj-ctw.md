@@ -36,9 +36,12 @@ plugins {
     id "io.freefair.aspectj.post-compile-weaving"
 }
 ```
+---
 # Idea配置
 1. 安装Idea插件 `AspectJ`
 2. 在Idea菜单`Project Structure` (即`项目结构`) >`Facet` 中，添加 `AspectJ` 并选择对应模块  
+  
+---
 
 # 注解式切面
 
