@@ -77,6 +77,7 @@ category_map:
   "前端": fe
   "Vue": vue
   "Web3": web3
+  "分布式系统": dist
   "算法&数据结构": alg-ds
 tag_map:
 
