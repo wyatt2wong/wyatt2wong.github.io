@@ -58,16 +58,18 @@ Shard shard = shardMap.ceilingEntry(shardGene); // 查找分片
   - 按特定规则换位：返回ID前，根据规则及其入参（如虚拟节点编号）从指定位开始调换
   - 请求时，根据特定位标识，恢复位的位置
 
+### 溢出
+- 号段ID溢出：ID长度增加到128位（16字节），路由时判断ID字节长度选择不同位移方式
+
 ### demo ddl
 ``` sql
 CREATE TABLE `test_order` (
-	`id` BIGINT(20) NOT NULL AUTO_INCREMENT,
-	`buyer_uid` BIGINT(20) NOT NULL COMMENT '买家uid',
 	`order_no` BIGINT(20) NOT NULL COMMENT '订单号, ((xxhash(buyer_uid)^murmurhash(buyer_uid))&0xFFFF)<<48|(号段ID&0xFFFFFFFFFFFF)',
-	PRIMARY KEY (`id`) USING BTREE,
-	UNIQUE INDEX `order_no` (`order_no`) USING BTREE,
+	`buyer_uid` BIGINT(20) NOT NULL COMMENT '买家uid',
+	PRIMARY KEY (`order_no`) USING BTREE,
 	INDEX `buyer_uid` (`buyer_uid`) USING BTREE
 )
 COLLATE='utf8mb4_bin'
 ENGINE=InnoDB;
 ```
+> 每个虚拟节点的订单号是趋势递增的，一段周期后mysql页分裂会趋于稳定
