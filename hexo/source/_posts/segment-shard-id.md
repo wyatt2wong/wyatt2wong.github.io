@@ -9,7 +9,7 @@ categories:
 
 ### 优化点
 > 预加载
->  - 加载ID段长度：MAX(申请下限,MIN(申请上限, 时间桶（如小时/分钟等）QPS * 希望缓冲时长(秒)))
+>  - 加载ID段长度：MAX(申请下限,MIN(申请上限, 分片ID时间桶（如小时/分钟等）QPS * 希望缓冲时长(秒)))
 >    - 时间桶QPS：时间桶开始时间戳+LongAddr(递增随机到数组一个元素，查时sum，适合写多读少统计)，当前时间>时间桶范围时，cas初始化开始时间戳和LongAddr
 >  - 双ID段：正式+预备，正式ID段分配率≥阈值，且预备ID段未初始，则线程cas竞争预加载ID段（双重检测） 
 
@@ -30,18 +30,18 @@ categories:
 ### 方案
 - 哈希算法：混合xxhash64+murmurhash64
 - 哈希环：16位(65536个虚拟节点)，每个虚拟节点对应一个物理分片
-- ID结构：64位8字节，高16位为分片ID（哈希环虚拟节点），低48位为号段ID
+- ID结构：64位8字节，高1位0（正数），中16位为分片ID（哈希环虚拟节点），低47位为号段ID
 
 ### 生成逻辑
 ``` java
 short shardGene = (xxhash64(所属业务ID) ^ murmurhash64(所属业务ID)) & 0xFFFF;
-long orderNo = shardGene << 48 | (segment.generate(1) & 0xFFFFFFFFFFFF);
+long orderNo = shardGene << 47 | (segment.generate(1) & 0x7FFFFFFFFFFF);
 ```
 
 ### 路由
 ``` java
 TreeMap<Short, Shard> shardMap = 配置中心热加载;
-short shardGene = (req.getOrderNo() >> 48) & 0xFFFF;
+short shardGene = (req.getOrderNo() >> 47) & 0xFFFF;
 Shard shard = shardMap.ceilingEntry(shardGene); // 查找分片
 ```
 
@@ -55,21 +55,28 @@ Shard shard = shardMap.ceilingEntry(shardGene); // 查找分片
 
 ### 安全
 - ID有序性
-  - 按特定规则换位：返回ID前，根据规则及其入参（如虚拟节点编号）从指定位开始调换
-  - 请求时，根据特定位标识，恢复位的位置
+  - 内部出入参：涉及order_id(内部用)和order_no(对外,128位)，DB只存储order_id，order_no可解密成order_id
+  - 对外（如openApi）出入参：只涉及order_no
+  - order_no：分片信息不加密
+    - 64-128位ID：号段ID用AES-CTR加密，绑定高16位分片ID作为初始向量（IV）,密钥版本记录在表里(仅用于审计)，查询时无解密路由分片，表存混淆后的order_no（建索引）
 
 ### 溢出
-- 号段ID溢出：ID长度增加到128位（16字节），路由时判断ID字节长度选择不同位移方式
-
+- 号段ID溢出：
+  - ID长度增加到128位（16字节）:
+    - 路由: 按字节长度选不同位移取分片信息，兼容新老位长的ID
+    - 表shard_gene字段：采取CAS WHEN LENGTH区分新老ID
+    - 表主键：类型改成VARBINARY(16)
 ### demo ddl
 ``` sql
 CREATE TABLE `test_order` (
-	`order_no` BIGINT(20) NOT NULL COMMENT '订单号, ((xxhash(buyer_uid)^murmurhash(buyer_uid))&0xFFFF)<<48|(号段ID&0xFFFFFFFFFFFF)',
-	`buyer_uid` BIGINT(20) NOT NULL COMMENT '买家uid',
-	PRIMARY KEY (`order_no`) USING BTREE,
-	INDEX `buyer_uid` (`buyer_uid`) USING BTREE
-)
-COLLATE='utf8mb4_bin'
-ENGINE=InnoDB;
+  `order_id` BIGINT(20) UNSIGNED NOT NULL COMMENT '订单号: ((xxhash(buyer_uid)^murmurhash(buyer_uid))&0xFFFF)<<47|(号段ID&0x7FFFFFFFFFFF)',
+  `order_no` BIGINT(20) NOT NULL, // 或类型改成VARBINARY(16)
+  `order_no_kv` INT NOT NULL, // 密钥版本 
+  `buyer_uid` BIGINT(20) NOT NULL,
+  `shard_gene` SMALLINT UNSIGNED GENERATED ALWAYS AS (`order_no` >> 47) VIRTUAL COMMENT '分片基因冗余，便于查询',
+  PRIMARY KEY (`order_id`) USING BTREE,
+  INDEX `idx_order_no` (`order_no`) USING BTREE
+  INDEX `idx_buyer_uid` (`buyer_uid`) USING BTREE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin;
 ```
 > 每个虚拟节点的订单号是趋势递增的，一段周期后mysql页分裂会趋于稳定
