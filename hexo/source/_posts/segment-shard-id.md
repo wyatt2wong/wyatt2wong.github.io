@@ -1,17 +1,22 @@
 ---
-title: 号段ID与业务全局ID设计
+title: 号段ID与业务全局ID
 categories:
   - ["分布式系统"]
 ---
 
-# 号段ID
-> 顾名思义，通过存储（如rdms、kv-store等）最大ID，由节点向存储申请一段连续ID段到本地分配，来满足分布式系统对高吞吐生成全局唯一ID的需求。
+# 号段
+> 顾名思义，通过存储（如rdms、kv-store等）最大ID，由节点向存储申请一段连续号段到本地分配，来满足分布式系统对高吞吐生成全局唯一ID的需求。
 
 ### 优化点
 > 预加载
->  - 加载ID段长度：MAX(申请下限,MIN(申请上限, 分片ID时间桶（如小时/分钟等）QPS * 希望缓冲时长(秒)))
->    - 时间桶QPS：时间桶开始时间戳+LongAddr(递增随机到数组一个元素，查时sum，适合写多读少统计)，当前时间>时间桶范围时，cas初始化开始时间戳和LongAddr
->  - 双ID段：正式+预备，正式ID段分配率≥阈值，且预备ID段未初始，则线程cas竞争预加载ID段（双重检测） 
+> - 加载号段长度：MAX(步长下限,MIN(步长上限, 消耗（上次步长/耗时）平均QPS * 希望缓冲时长(秒)))
+> - 双号段：正式+预备，正式号段分配率≥阈值，且预备号段未初始，则线程cas竞争预加载号段（双重检测） 
+
+> 全局缓冲
+> - Redis：双写Redis+DB(先Redis申请，无可分配号段则到DB申请号段并回写Redis)，核心使用`INCRBY`命令
+> - 容灾
+>   - DB短暂故障：节点向DB申请号段捕获一定量异常后，短期不再请求DB，由Redis自动扩充号段（version+1)，超期后节点尝试请求Redis，DB恢复后校验version+maxId同步Redis号段
+>   - Redis短暂故障：请求>达到异常阈值>周期不请求>重试请求>捕获,以此循环
 
 > 多计数器： 每1-N个一致性哈希虚拟节点用一个号段计数器，减少cas竞争率
 
@@ -28,20 +33,32 @@ categories:
 - 迁移数据量低，且不中断服务
 
 ### 方案
-- 哈希算法：混合xxhash64+murmurhash64
-- 哈希环：16位(65536个虚拟节点)，每个虚拟节点对应一个物理分片
-- ID结构：64位8字节，高1位0（正数），中16位为分片ID（哈希环虚拟节点），低47位为号段ID
+- 一致性哈希算法：混合xxhash64+murmurhash64
+- 哈希环：每个虚拟节点对应一个物理分片(一般N:1)，按负载/数据均匀情况映射不同虚拟节点到物理节点
+- ID结构：
+> ### 64位8字节(万亿级)
+> - 1位：0(正数)
+> - 14-16位分片基因：8,192-65,536个虚拟节点
+> - 5-7位加密版本：32-128个，金融或军事级建议≥128个加密版本(如季度换密钥，32个版本能用8年，数据归档后可复用低版本号)
+> - 42位号段ID：约43,980亿
+
+> ### 128位16字节
+> - 1位：0(正数)
+> - 23位分片基因：8,388,608个虚拟节点
+> - 20位加密版本：每天换密钥，能用3,000年
+> - 84位号段ID：正常用不完...
+> > 分片粒度更细，可细粒度的映射冷热虚拟节点到对应物理节点，更少的数据迁移解决数据倾斜问题
 
 ### 生成逻辑
 ``` java
 short shardGene = (xxhash64(所属业务ID) ^ murmurhash64(所属业务ID)) & 0xFFFF;
-long orderNo = shardGene << 47 | (segment.generate(1) & 0x7FFFFFFFFFFF);
+long orderNo = shardGene << 48 | (segment.generate(1) & 0xFFFFFFFFFFFF);
 ```
 
 ### 路由
 ``` java
 TreeMap<Short, Shard> shardMap = 配置中心热加载;
-short shardGene = (req.getOrderNo() >> 47) & 0xFFFF;
+short shardGene = (req.getOrderNo() >> 48) & 0xFFFF;
 Shard shard = shardMap.ceilingEntry(shardGene); // 查找分片
 ```
 
@@ -55,28 +72,23 @@ Shard shard = shardMap.ceilingEntry(shardGene); // 查找分片
 
 ### 安全
 - ID有序性
-  - 内部出入参：涉及order_id(内部用)和order_no(对外,128位)，DB只存储order_id，order_no可解密成order_id
-  - 对外（如openApi）出入参：只涉及order_no
-  - order_no：分片信息不加密
-    - 64-128位ID：号段ID用AES-CTR加密，绑定高16位分片ID作为初始向量（IV）,密钥版本记录在表里(仅用于审计)，查询时无解密路由分片，表存混淆后的order_no（建索引）
+  - 加密算法
+    - ChaCha20：低15位加密，分片基因(16位)
+    - AES CTR：
+  - 请求时，根据特定位标识，恢复位的位置
 
 ### 溢出
-- 号段ID溢出：
-  - ID长度增加到128位（16字节）:
-    - 路由: 按字节长度选不同位移取分片信息，兼容新老位长的ID
-    - 表shard_gene字段：采取CAS WHEN LENGTH区分新老ID
-    - 表主键：类型改成VARBINARY(16)
+- 号段ID溢出：ID长度增加到128位（16字节），路由时判断ID字节长度选择不同位移方式
+
 ### demo ddl
 ``` sql
 CREATE TABLE `test_order` (
-  `order_id` BIGINT(20) UNSIGNED NOT NULL COMMENT '订单号: ((xxhash(buyer_uid)^murmurhash(buyer_uid))&0xFFFF)<<47|(号段ID&0x7FFFFFFFFFFF)',
-  `order_no` BIGINT(20) NOT NULL, // 或类型改成VARBINARY(16)
-  `order_no_kv` INT NOT NULL, // 密钥版本 
-  `buyer_uid` BIGINT(20) NOT NULL,
-  `shard_gene` SMALLINT UNSIGNED GENERATED ALWAYS AS (`order_no` >> 47) VIRTUAL COMMENT '分片基因冗余，便于查询',
-  PRIMARY KEY (`order_id`) USING BTREE,
-  INDEX `idx_order_no` (`order_no`) USING BTREE
-  INDEX `idx_buyer_uid` (`buyer_uid`) USING BTREE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin;
+	`order_id` BIGINT(20) NOT NULL COMMENT '订单id, ((xxhash(buyer_uid)^murmurhash(buyer_uid))&0xFFFF)<<48|(号段ID&0xFFFFFFFFFFFF)',
+	`order_no` BIGINT(20) NOT NULL COMMENT '混淆的订单id，可选',
+	`buyer_uid` BIGINT(20) NOT NULL COMMENT '买家uid',
+	PRIMARY KEY (`order_id`) USING BTREE,
+	INDEX `order_no` (`order_no`) USING BTREE,
+	INDEX `buyer_uid` (`buyer_uid`) USING BTREE
+) COLLATE='utf8mb4_bin' ENGINE=InnoDB;
 ```
 > 每个虚拟节点的订单号是趋势递增的，一段周期后mysql页分裂会趋于稳定

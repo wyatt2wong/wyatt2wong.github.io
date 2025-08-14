@@ -1,0 +1,104 @@
+<!DOCTYPE html><html lang="en"><head><meta http-equiv="content-type" content="text/html; charset=utf-8"><meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0" name="viewport"><meta content="yes" name="apple-mobile-web-app-capable"><meta content="black-translucent" name="apple-mobile-web-app-status-bar-style"><meta content="telephone=no" name="format-detection"><meta name="description" content="淡泊以明志，宁静以致远"><meta name="theme-color" content="#2d4356"><meta name="baidu-site-verification"><title>号段ID与业务全局ID | Wyatt Wong's Labs</title><link rel="stylesheet" type="text/css" href="/css/style.css"><link rel="Shortcut Icon" type="image/x-icon" href="/favicon.png"><link rel="stylesheet" href="//cdn.bootcss.com/font-awesome/4.7.0/css/font-awesome.min.css"><script type="text/javascript" src="//cdn.jsdelivr.net/npm/jquery@3.4.1/dist/jquery.min.js"></script><meta name="generator" content="Hexo 7.3.0"><link rel="alternate" href="/atom.xml" title="Wyatt Wong's Labs" type="application/atom+xml">
+</head><link rel="stylesheet" type="text/css" href="/plugins/highlight/atom-one-dark.min.css"><script type="text/javascript" src="/plugins/highlight/highlight.min.js"></script><script>hljs.initHighlightingOnLoad();
+</script><script type="text/javascript" src="/js/ready.js" async></script><link rel="stylesheet" href="//cdn.jsdelivr.net/gh/fancyapps/fancybox@3.5.7/dist/jquery.fancybox.min.css"><body class="night"><div class="mobile-head" id="mobile-head"><div class="navbar-icon"><span></span><span></span><span></span></div><div class="navbar-title"><a href="/">LITREILY</a></div><div class="navbar-search"><!--= show a circle here--></div></div><div class="h-wrapper" id="menu"><nav class="h-head box"><div class="m-hdimg"><a class="hdimg img" href="/"><img class="nofancybox" src="/img/profile.jpg" width="128" height="128"></a><h1 class="ttl"><a href="/">Wyatt Wong's Labs</a></h1></div><p class="m-desc">淡泊以明志，宁静以致远。</p><div class="m-nav"><ul><li><span class="dot">●</span><a href="/archives/">归档</a></li><li><span class="dot">●</span><a href="/categories/">分类</a></li><li><span class="dot">●</span><a href="/tags/">标签</a></li><li><span class="dot">●</span><a href="/about/">关于</a></li><li><span class="dot">●</span><a href="/atom.xml">RSS</a></li><li class="m-sch"><form class="form" id="j-formsch" method="get"><input class="txt" type="text" id="local-search-input" name="q" value="搜索" onfocus="if(this.value=='搜索'){this.value='';}" onblur="if(this.value==''){this.value='搜索';}"><input type="text" style="display:none;"></form></li></ul><div id="local-search-result"></div></div></nav></div><div id="back2Top"><a class="fa fa-arrow-up" title="Back to top" href="#"></a></div><div class="box" id="container"><div class="l-wrapper"><div class="l-content box"><div class="l-post l-post-art"><article class="p-art"><div class="p-header box"><h1 class="p-title">号段ID与业务全局ID</h1><div class="p-info"><span class="p-date"><i class="fa fa-calendar"></i><a href="/2025/08/09/segment-shard-id/">2025-08-09</a></span><span class="p-category"><i class="fa fa-folder"></i><a href="/categories/dist/">分布式系统</a></span></div></div><div class="p-content"><h1 id="号段"><a href="#号段" class="headerlink" title="号段"></a>号段</h1><blockquote>
+<p>顾名思义，通过存储（如rdms、kv-store等）最大ID，由节点向存储申请一段连续号段到本地分配，来满足分布式系统对高吞吐生成全局唯一ID的需求。</p>
+</blockquote>
+<h3 id="优化点"><a href="#优化点" class="headerlink" title="优化点"></a>优化点</h3><blockquote>
+<p>预加载</p>
+<ul>
+<li>加载号段长度：MAX(步长下限,MIN(步长上限, 消耗（上次步长&#x2F;耗时）平均QPS * 希望缓冲时长(秒)))</li>
+<li>双号段：正式+预备，正式号段分配率≥阈值，且预备号段未初始，则线程cas竞争预加载号段（双重检测）</li>
+</ul>
+</blockquote>
+<blockquote>
+<p>全局缓冲</p>
+<ul>
+<li>Redis：双写Redis+DB(先Redis申请，无可分配号段则到DB申请号段并回写Redis)，核心使用<code>INCRBY</code>命令</li>
+<li>容灾<ul>
+<li>DB短暂故障：节点向DB申请号段捕获一定量异常后，短期不再请求DB，由Redis自动扩充号段（version+1)，超期后节点尝试请求Redis，DB恢复后校验version+maxId同步Redis号段</li>
+<li>Redis短暂故障：请求&gt;达到异常阈值&gt;周期不请求&gt;重试请求&gt;捕获,以此循环</li>
+</ul>
+</li>
+</ul>
+</blockquote>
+<blockquote>
+<p>多计数器： 每1-N个一致性哈希虚拟节点用一个号段计数器，减少cas竞争率</p>
+</blockquote>
+<hr>
+<h1 id="业务全局ID"><a href="#业务全局ID" class="headerlink" title="业务全局ID"></a>业务全局ID</h1><h3 id="目标"><a href="#目标" class="headerlink" title="目标"></a>目标</h3><ul>
+<li>生成速率 ≥ 百万ID&#x2F;s</li>
+<li>无时间回拨风险</li>
+<li>弹性扩缩容</li>
+<li>拆合冷热分片</li>
+<li>同所属业务ID（如C端用户）数据(如订单)在同分片</li>
+<li>迁移数据量低，且不中断服务</li>
+</ul>
+<h3 id="方案"><a href="#方案" class="headerlink" title="方案"></a>方案</h3><ul>
+<li>一致性哈希算法：混合xxhash64+murmurhash64</li>
+<li>哈希环：每个虚拟节点对应一个物理分片(一般N:1)，按负载&#x2F;数据均匀情况映射不同虚拟节点到物理节点</li>
+<li>ID结构：<blockquote>
+<h3 id="64位8字节-万亿级"><a href="#64位8字节-万亿级" class="headerlink" title="64位8字节(万亿级)"></a>64位8字节(万亿级)</h3></blockquote>
+</li>
+</ul>
+<blockquote>
+<ul>
+<li>1位：0(正数)</li>
+<li>14-16位分片基因：8,192-65,536个虚拟节点</li>
+<li>5-7位加密版本：32-128个，金融或军事级建议≥128个加密版本(如季度换密钥，32个版本能用8年，数据归档后可复用低版本号)</li>
+<li>42位号段ID：约43,980亿</li>
+</ul>
+</blockquote>
+<blockquote>
+<h3 id="128位16字节"><a href="#128位16字节" class="headerlink" title="128位16字节"></a>128位16字节</h3><ul>
+<li>1位：0(正数)</li>
+<li>23位分片基因：8,388,608个虚拟节点</li>
+<li>20位加密版本：每天换密钥，能用3,000年</li>
+<li>84位号段ID：正常用不完…<blockquote>
+<p>分片粒度更细，可细粒度的映射冷热虚拟节点到对应物理节点，更少的数据迁移解决数据倾斜问题</p>
+</blockquote>
+</li>
+</ul>
+</blockquote>
+<h3 id="生成逻辑"><a href="#生成逻辑" class="headerlink" title="生成逻辑"></a>生成逻辑</h3><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">short</span> <span class="variable">shardGene</span> <span class="operator">=</span> (xxhash64(所属业务ID) ^ murmurhash64(所属业务ID)) &amp; <span class="number">0xFFFF</span>;</span><br><span class="line"><span class="type">long</span> <span class="variable">orderNo</span> <span class="operator">=</span> shardGene &lt;&lt; <span class="number">48</span> | (segment.generate(<span class="number">1</span>) &amp; <span class="number">0xFFFFFFFFFFFF</span>);</span><br></pre></td></tr></table></figure>
+
+<h3 id="路由"><a href="#路由" class="headerlink" title="路由"></a>路由</h3><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">TreeMap&lt;Short, Shard&gt; shardMap = 配置中心热加载;</span><br><span class="line"><span class="type">short</span> <span class="variable">shardGene</span> <span class="operator">=</span> (req.getOrderNo() &gt;&gt; <span class="number">48</span>) &amp; <span class="number">0xFFFF</span>;</span><br><span class="line"><span class="type">Shard</span> <span class="variable">shard</span> <span class="operator">=</span> shardMap.ceilingEntry(shardGene); <span class="comment">// 查找分片</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="拆合冷热分片"><a href="#拆合冷热分片" class="headerlink" title="拆合冷热分片"></a>拆合冷热分片</h3><ul>
+<li>路由表变更<ul>
+<li>新旧物理分片按映射的虚拟节点，更新到路由表</li>
+</ul>
+</li>
+<li>数据迁移<ul>
+<li>迁移：全量+增量同步源分片数据到目标分片</li>
+<li>切流：将源虚拟节点的流量，按比例(如模序号)滚动(如每次5%+1分钟监控)切到目标分片<ul>
+<li>回退：实现数据双向同步，通过cas(version)控制并发更新</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+<h3 id="安全"><a href="#安全" class="headerlink" title="安全"></a>安全</h3><ul>
+<li>ID有序性<ul>
+<li>加密算法<ul>
+<li>ChaCha20：低15位加密，分片基因(16位)</li>
+<li>AES CTR：</li>
+</ul>
+</li>
+<li>请求时，根据特定位标识，恢复位的位置</li>
+</ul>
+</li>
+</ul>
+<h3 id="溢出"><a href="#溢出" class="headerlink" title="溢出"></a>溢出</h3><ul>
+<li>号段ID溢出：ID长度增加到128位（16字节），路由时判断ID字节长度选择不同位移方式</li>
+</ul>
+<h3 id="demo-ddl"><a href="#demo-ddl" class="headerlink" title="demo ddl"></a>demo ddl</h3><figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">CREATE TABLE</span> `test_order` (</span><br><span class="line">	`order_id` <span class="type">BIGINT</span>(<span class="number">20</span>) <span class="keyword">NOT NULL</span> COMMENT <span class="string">&#x27;订单id, ((xxhash(buyer_uid)^murmurhash(buyer_uid))&amp;0xFFFF)&lt;&lt;48|(号段ID&amp;0xFFFFFFFFFFFF)&#x27;</span>,</span><br><span class="line">	`order_no` <span class="type">BIGINT</span>(<span class="number">20</span>) <span class="keyword">NOT NULL</span> COMMENT <span class="string">&#x27;混淆的订单id，可选&#x27;</span>,</span><br><span class="line">	`buyer_uid` <span class="type">BIGINT</span>(<span class="number">20</span>) <span class="keyword">NOT NULL</span> COMMENT <span class="string">&#x27;买家uid&#x27;</span>,</span><br><span class="line">	<span class="keyword">PRIMARY KEY</span> (`order_id`) <span class="keyword">USING</span> BTREE,</span><br><span class="line">	INDEX `order_no` (`order_no`) <span class="keyword">USING</span> BTREE,</span><br><span class="line">	INDEX `buyer_uid` (`buyer_uid`) <span class="keyword">USING</span> BTREE</span><br><span class="line">) <span class="keyword">COLLATE</span><span class="operator">=</span><span class="string">&#x27;utf8mb4_bin&#x27;</span> ENGINE<span class="operator">=</span>InnoDB;</span><br></pre></td></tr></table></figure>
+<blockquote>
+<p>每个虚拟节点的订单号是趋势递增的，一段周期后mysql页分裂会趋于稳定</p>
+</blockquote>
+</div><div class="p-copyright"><blockquote><div class="p-copyright-author"><span class="p-copyright-key">本文作者：</span><span class="p-copytight-value"><a href="mailto:litreily@163.com">Wyatt Wong</a></span></div><div class="p-copyright-link"><span class="p-copyright-key">本文链接：</span><span class="p-copytight-value"><a href="/2025/08/09/segment-shard-id/">https://wyatt2wong.github.io/2025/08/09/segment-shard-id/</a></span></div><div class="p-copyright-note"><span class="p-copyright-key">版权声明：</span><span class="p-copytight-value">本博客所有文章除特殊声明外，均采用<a rel="nofollow" target="_blank" href="https://creativecommons.org/licenses/by-nc/4.0/"> CC BY-NC 4.0 </a>许可协议。转载请注明出处 <a href="https://wyatt2wong.github.io">Wyatt Wong的博客</a>！</span></div></blockquote></div></article><div class="p-info box"></div><aside id="toc"><div class="toc-title">目录</div><nav><ol class="toc"><li class="toc-item toc-level-1"><a class="toc-link" href="#%E5%8F%B7%E6%AE%B5"><span class="toc-number">1.</span> <span class="toc-text">号段</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E4%BC%98%E5%8C%96%E7%82%B9"><span class="toc-number">1.0.1.</span> <span class="toc-text">优化点</span></a></li></ol></li></ol></li><li class="toc-item toc-level-1"><a class="toc-link" href="#%E4%B8%9A%E5%8A%A1%E5%85%A8%E5%B1%80ID"><span class="toc-number">2.</span> <span class="toc-text">业务全局ID</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E7%9B%AE%E6%A0%87"><span class="toc-number">2.0.1.</span> <span class="toc-text">目标</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E6%96%B9%E6%A1%88"><span class="toc-number">2.0.2.</span> <span class="toc-text">方案</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#64%E4%BD%8D8%E5%AD%97%E8%8A%82-%E4%B8%87%E4%BA%BF%E7%BA%A7"><span class="toc-number">2.0.3.</span> <span class="toc-text">64位8字节(万亿级)</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#128%E4%BD%8D16%E5%AD%97%E8%8A%82"><span class="toc-number">2.0.4.</span> <span class="toc-text">128位16字节</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E7%94%9F%E6%88%90%E9%80%BB%E8%BE%91"><span class="toc-number">2.0.5.</span> <span class="toc-text">生成逻辑</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E8%B7%AF%E7%94%B1"><span class="toc-number">2.0.6.</span> <span class="toc-text">路由</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E6%8B%86%E5%90%88%E5%86%B7%E7%83%AD%E5%88%86%E7%89%87"><span class="toc-number">2.0.7.</span> <span class="toc-text">拆合冷热分片</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E5%AE%89%E5%85%A8"><span class="toc-number">2.0.8.</span> <span class="toc-text">安全</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E6%BA%A2%E5%87%BA"><span class="toc-number">2.0.9.</span> <span class="toc-text">溢出</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#demo-ddl"><span class="toc-number">2.0.10.</span> <span class="toc-text">demo ddl</span></a></li></ol></li></ol></li></ol></nav></aside></div><section class="p-ext"><div class="l-pager l-pager-dtl box"><a class="prev" href="/2025/08/09/merge-request/">&lt; 请求合并案例</a></div></section><footer><p>Copyright © 2025 - 2025 <a href="/." rel="nofollow">Wyatt Wong's Labs</a> | <strong><a rel="nofollow" target="_blank" href="https://creativecommons.org/licenses/by-nc/4.0/">CC BY-NC 4.0</a></strong><br>Powered by<a rel="nofollow" target="_blank" href="https://hexo.io"> Hexo.</a>Theme with<a rel="nofollow" target="_blank" href="https://github.com/litreily/snark-hexo"> snark.</a></p></footer></div></div></div><script type="text/javascript" src="/js/search.js"></script><script type="text/javascript" src="/js/top.js"></script><script>var search_path = 'search.xml';
+if (search_path.length == 0) {
+    search_path = 'search.xml';
+}
+var path = '/' + search_path;
+searchFunc(path, 'local-search-input', 'local-search-result');
+</script><script type="text/javascript" src="//cdn.jsdelivr.net/gh/fancyapps/fancybox@3.5.7/dist/jquery.fancybox.min.js"></script><script type="text/javascript" src="/js/fancybox.js?v=0.0.1" async></script></body></html>
