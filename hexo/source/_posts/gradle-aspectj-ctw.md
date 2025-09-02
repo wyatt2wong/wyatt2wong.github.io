@@ -1,5 +1,6 @@
 ---
 title: AspectJ在Gradle的CTW案例
+date: 2025-07-15 21:21:00 +0800
 categories:
   - ["java"]
 ---
