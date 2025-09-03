@@ -1,0 +1,52 @@
+<!DOCTYPE html><html lang="en"><head><meta http-equiv="content-type" content="text/html; charset=utf-8"><meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0" name="viewport"><meta content="yes" name="apple-mobile-web-app-capable"><meta content="black-translucent" name="apple-mobile-web-app-status-bar-style"><meta content="telephone=no" name="format-detection"><meta name="description" content="淡泊以明志，宁静以致远"><meta name="theme-color" content="#2d4356"><meta name="baidu-site-verification"><title>B+Tree简要理解 | Wyatt Wong's Labs</title><link rel="stylesheet" type="text/css" href="/css/style.css"><link rel="Shortcut Icon" type="image/x-icon" href="/favicon.png"><link rel="stylesheet" href="//cdn.bootcss.com/font-awesome/4.7.0/css/font-awesome.min.css"><script type="text/javascript" src="//cdn.jsdelivr.net/npm/jquery@3.4.1/dist/jquery.min.js"></script><meta name="generator" content="Hexo 7.3.0"><link rel="alternate" href="/atom.xml" title="Wyatt Wong's Labs" type="application/atom+xml">
+</head><link rel="stylesheet" type="text/css" href="/plugins/highlight/atom-one-dark.min.css"><script type="text/javascript" src="/plugins/highlight/highlight.min.js"></script><script>hljs.initHighlightingOnLoad();
+</script><script type="text/javascript" src="/js/ready.js" async></script><link rel="stylesheet" href="//cdn.jsdelivr.net/gh/fancyapps/fancybox@3.5.7/dist/jquery.fancybox.min.css"><body class="night"><div class="mobile-head" id="mobile-head"><div class="navbar-icon"><span></span><span></span><span></span></div><div class="navbar-title"><a href="/">LITREILY</a></div><div class="navbar-search"><!--= show a circle here--></div></div><div class="h-wrapper" id="menu"><nav class="h-head box"><div class="m-hdimg"><a class="hdimg img" href="/"><img class="nofancybox" src="/img/profile.jpg" width="128" height="128"></a><h1 class="ttl"><a href="/">Wyatt Wong's Labs</a></h1></div><p class="m-desc">淡泊以明志，宁静以致远。</p><div class="m-nav"><ul><li><span class="dot">●</span><a href="/archives/">归档</a></li><li><span class="dot">●</span><a href="/categories/">分类</a></li><li><span class="dot">●</span><a href="/tags/">标签</a></li><li><span class="dot">●</span><a href="/about/">关于</a></li><li><span class="dot">●</span><a href="/atom.xml">RSS</a></li><li class="m-sch"><form class="form" id="j-formsch" method="get"><input class="txt" type="text" id="local-search-input" name="q" value="搜索" onfocus="if(this.value=='搜索'){this.value='';}" onblur="if(this.value==''){this.value='搜索';}"><input type="text" style="display:none;"></form></li></ul><div id="local-search-result"></div></div></nav></div><div id="back2Top"><a class="fa fa-arrow-up" title="Back to top" href="#"></a></div><div class="box" id="container"><div class="l-wrapper"><div class="l-content box"><div class="l-post l-post-art"><article class="p-art"><div class="p-header box"><h1 class="p-title">B+Tree简要理解</h1><div class="p-info"><span class="p-date"><i class="fa fa-calendar"></i><a href="/2025/07/17/segment-id/">2025-07-17</a></span><span class="p-category"><i class="fa fa-folder"></i><a href="/categories/alg-ds/">算法&amp;数据结构</a></span></div></div><div class="p-content"><p><code>B+Tree</code>是一种为磁盘等存取设备设计的平衡查找树，它实现了以<code>O(log n)</code>复杂度执行<code>查找、顺序读、插入和删除</code>操作。</p>
+<p>与B-Tree主要区别：</p>
+<blockquote>
+<ol>
+<li>非叶子节点不存数据，通过更低的树高度减少存取设备的IO次数</li>
+</ol>
+</blockquote>
+<blockquote>
+<ol start="2">
+<li>叶子节点有前后指针，通过双向链表实现高效的范围查找</li>
+</ol>
+</blockquote>
+<p>实现B+Tree的核心思路：</p>
+<ol>
+<li>根据允许的节点最大空间（如mysql innodb默认16KB），算出每个节点的上下界(Lower&#x2F;Upper Bound)</li>
+</ol>
+<ul>
+<li>根节点：关键字数在1至m-1个之间，子节点数在2-m个之间</li>
+<li>非根非叶节点：关键字数在(m&#x2F;2)-1至m-1个之间，子节点数在ceil(m&#x2F;2)至个之间</li>
+<li>叶节点：关键字数同<code>非根非叶节点</code>，无子节点<blockquote>
+<p>m为非叶子节点的子节点数的最大值<br>如mysql innodb每页默认16KB，假设每行记录关键字4 byte，则一个非页子节点最多容纳 <code>16*1024/4=4096</code> 行记录关键字</p>
+</blockquote>
+</li>
+</ul>
+<ol start="2">
+<li>插入<blockquote>
+<p>找到位置插入后，若节点关键字数超上界, 则</p>
+<ol>
+<li>取节点中间关键字拆成两个节点，把中间关键字插入父节点，插入位置由原父分割关键字位置决定(如原上级左则插右，反之则右左)</li>
+<li>以父节点为中心检查是否超出上界，超出则递归执行第一、二步。</li>
+</ol>
+</blockquote>
+</li>
+<li>删除<blockquote>
+<p>删除后，若当前节点关键字数低于下界，则</p>
+<ol>
+<li>向<code>大于下界</code>的<code>兄弟节点</code>借关键字(<code>原父分割关键字下沉，左或右兄弟节点关键字上升，直到借出目标节点完成关键字上升</code>)</li>
+<li>无<code>大于下界</code>的<code>兄弟节点</code>，<code>合并一个相邻兄弟节点且原父分割关键字下沉</code>，以父节点为中心递归检查是否低于下界</li>
+<li>节点调整后，要始终保证<code>页子节点的双向链表连续性</code>。</li>
+</ol>
+</blockquote>
+</li>
+</ol>
+</div><div class="p-copyright"><blockquote><div class="p-copyright-author"><span class="p-copyright-key">本文作者：</span><span class="p-copytight-value"><a href="mailto:litreily@163.com">Wyatt Wong</a></span></div><div class="p-copyright-link"><span class="p-copyright-key">本文链接：</span><span class="p-copytight-value"><a href="/2025/07/17/segment-id/">https://wyatt2wong.github.io/2025/07/17/segment-id/</a></span></div><div class="p-copyright-note"><span class="p-copyright-key">版权声明：</span><span class="p-copytight-value">本博客所有文章除特殊声明外，均采用<a rel="nofollow" target="_blank" href="https://creativecommons.org/licenses/by-nc/4.0/"> CC BY-NC 4.0 </a>许可协议。转载请注明出处 <a href="https://wyatt2wong.github.io">Wyatt Wong的博客</a>！</span></div></blockquote></div></article><div class="p-info box"></div><aside id="toc"><div class="toc-title">目录</div><nav></nav></aside></div><section class="p-ext"><div class="l-pager l-pager-dtl box"><a class="prev" href="/2025/08/09/segment-shard-id/">&lt; 号段ID与业务全局ID</a><a class="next" href="/2025/07/17/merge-request/">请求合并案例 &gt;</a></div></section><footer><p>Copyright © 2025 - 2025 <a href="/." rel="nofollow">Wyatt Wong's Labs</a> | <strong><a rel="nofollow" target="_blank" href="https://creativecommons.org/licenses/by-nc/4.0/">CC BY-NC 4.0</a></strong><br>Powered by<a rel="nofollow" target="_blank" href="https://hexo.io"> Hexo.</a>Theme with<a rel="nofollow" target="_blank" href="https://github.com/litreily/snark-hexo"> snark.</a></p></footer></div></div></div><script type="text/javascript" src="/js/search.js"></script><script type="text/javascript" src="/js/top.js"></script><script>var search_path = 'search.xml';
+if (search_path.length == 0) {
+    search_path = 'search.xml';
+}
+var path = '/' + search_path;
+searchFunc(path, 'local-search-input', 'local-search-result');
+</script><script type="text/javascript" src="//cdn.jsdelivr.net/gh/fancyapps/fancybox@3.5.7/dist/jquery.fancybox.min.js"></script><script type="text/javascript" src="/js/fancybox.js?v=0.0.1" async></script></body></html>
